@@ -1,0 +1,216 @@
+{\rtf1\ansi\deff0\nouicompat{\fonttbl{\f0\fnil\fcharset0 Courier New;}{\f1\fnil Courier New;}}
+{\*\generator Riched20 10.0.19041}\viewkind4\uc1 
+\pard\f0\fs22\lang16393 clc;\par
+\par
+\b\i\fs36 %Reading the image\b0\i0\fs22\par
+imgRead=imread('1.png');\par
+imgRead=rgb2gray(imgRead);\par
+img=im2double(imgRead);\par
+figure, imshow(img);\par
+\par
+\b\i\fs36 %Morphology\b0\i0\fs22\par
+se=strel('line', 45, 0);\par
+imgMorph=imtophat(~(img), se);\par
+\tab %IM2 = imtophat(IM,SE) performs morphological top-hat filtering on the grayscale or binary input image IM using the structuring \tab element SE, where SE is returned by strel. SE must be a single structuring element object, not an array containing multiple structuring \tab element objects.\par
+\tab %You can use top-hat filtering to correct uneven illumination when the background is dark. This example uses top-hat filtering with a \tab disk-shaped structuring element to remove the uneven background illumination from an image.\par
+\par
+\b\i\fs36 %Rescale the Image\b0\i0\fs22\par
+[x,y]=size(imgMorph);\par
+midx=round(x/2);\par
+\par
+i=1; yinit=i+1;\par
+while(imgMorph(midx, i)==0)\par
+     i=i+1;\par
+     yinit=i;\par
+end\par
+\par
+i=y; yend = i-1;\par
+while(imgMorph(midx, i)==0)\par
+      i=i-1;\par
+      yend=i;\par
+end\par
+\par
+imgRescaled=imgMorph(midx:midx, yinit:yend);\par
+\par
+imgRescaled=imresize(imgRescaled, [1 10*95]);\par
+\par
+imgBits=zeros(95);\par
+for i=1:95\par
+    imgBits(1,i)=imgRescaled(1, 10*(i-1)+5);\par
+end\par
+\par
+imgRescaled=imgBits(1,:);\par
+\par
+\b\i\fs32 %  BarCode Decodification\b0\i0\fs22\par
+\par
+\tab %check c1\par
+digit=1;\par
+C1=imgRescaled(digit:digit+2);\par
+digit=digit + 3;\par
+if(C1~=[1 0 1])\par
+     disp('Error on C1');\par
+end\par
+\par
+ean13 = [0 0 0 0 0 0 0 0 0 0 0 0 0];\par
+\par
+ean13 (2) = EAN13digits(imgRescaled(digit: digit+6));\par
+digit = digit + 7;\par
+ean13 (3) = EAN13digits(imgRescaled(digit: digit+6));\par
+digit = digit + 7;\par
+ean13 (4) = EAN13digits(imgRescaled(digit: digit+6));\par
+digit = digit + 7;\par
+ean13 (5) = EAN13digits(imgRescaled(digit: digit+6));\par
+digit = digit + 7;\par
+ean13 (6) = EAN13digits(imgRescaled(digit: digit+6));\par
+digit = digit + 7;\par
+ean13 (7) = EAN13digits(imgRescaled(digit: digit+6));\par
+digit = digit + 7;\par
+\par
+\tab %check c2\par
+C2 = imgRescaled (digit:digit+4);\par
+digit = digit + 5;\par
+if(C2 ~= [0 1 0 1 0])\par
+    disp('Error on C2');   \par
+end\par
+\par
+ean13 (8) = EAN13digits(imgRescaled(digit: digit+6));\par
+digit = digit + 7;\par
+ean13 (9) = EAN13digits(imgRescaled(digit: digit+6));\par
+digit = digit + 7;\par
+ean13 (10) = EAN13digits(imgRescaled(digit: digit+6));\par
+digit = digit + 7;\par
+ean13 (11) = EAN13digits(imgRescaled(digit: digit+6));\par
+digit = digit + 7;\par
+ean13 (12) = EAN13digits(imgRescaled(digit: digit+6));\par
+digit = digit + 7;\par
+ean13 (13) = EAN13digits(imgRescaled(digit: digit+6));\par
+digit = digit + 7;\par
+\par
+\b\i\fs32 % Check Digit   \b0\i0\fs22\par
+mult = [3 1 3 1 3 1 3 1 3 1 3 1];\par
+\tab  \b % Initially we can see that we have declared an array with Constant values of 3 and 1 which is replicated multiple times which is nothing but basically the weight of the digits in that position of ean13(1) till ean13(13) and is used for obtaining the correct number system value of ean13(1) or also called as country code.\b0\par
+\tab\b % Number system:- is nothing but As the barcode has been divided into parts the first two digits are called number system.\par
+\b0 checkDigit = ean13 (2:13).*mult; \par
+\tab\b % and then we multiply all elements induvidually with the constant mult to obtain a variable called checkdigit\par
+\b0 checkDigit = sum(checkDigit);\par
+\tab  \b % and then we calculate the sum of the array check digit that we have obtained \b0\par
+\par
+sub = ceil(checkDigit / 10) * 10; \par
+\tab\b % we then initialize a new variable sub which contains the ceiling round off value of the checkdigit /10 and then multiple it again back by 10 in order to return a number with the same mathematical positional value as checkDigit this means nothing but if the checkdigit is double digit so should the sub.   \par
+\tab %The ceil function or ceiling function (also commonly called \'e2\'80\f1\'98least integer function\f0\'e2\'80\'99) for any real number gives the smallest integer which is greater than the number itself. \b0\par
+checkDigit = sub - checkDigit;\b\par
+\tab  % now we find the final value of the country code or check digit by subtracting the value of the sub by the value of check digit that we possess\par
+\tab % This is important as in the beginning we saw what happens when we run a bar code with 12 digits insted of 13 we then see that it returns 0 in the first digit then the rest digit stays same as the value of sub and checkdigit will then be the same.\par
+\tab % now we know the exact value of the country code which is outside of the barcode\par
+\b0 ean13(1) = checkDigit; \par
+\tab\b % here as we know the exact value we store it in its position which is ean13(1) so basically we put the value of the final check digit back into ean13(1)'s position which up until now has been 0.\par
+\b0\par
+ean13str = mat2str (ean13);\par
+\tab\b %we then use an functioin mat2str which converts the numeric matrix ean13 into a character vector that represents the matrix, with up to 15 digits of precision as over here we need only 13 digits max.and we store it in ean13str.\par
+\b0\par
+disp ('Barcode reads: ');\par
+disp (ean13str);\par
+\tab\b %and then finally after we have our 13 digits barcode discovered we print it in command prompt along with a message that says Barcode reads\par
+\tab %now we come to the part which is the function call that was referred before when arushi was explaining. it has a pretty constant working principle with a lot of predefined condition.\par
+\tab % we start with the function declaration itself.\par
+\b0 function [number, code] = EAN13digits( vector7)\b\par
+\tab % so over here we have EAN13digits as the function name that accepts input (vector7) and returns output [number and code] \f1\fs32\tab\fs22\par
+\par
+\f0\tab\f1 % from here it is a constant condition for the array with 7 \f0 bits , \f1 the number can range from 0 to 9 as we can only use multiple single digits to represent a barcode\par
+\f0\tab\f1 % SO \f0 here we have \f1 THE THREE BASIC CODES \f0 which are\f1  L CODE , G CODE AND R CODE which have their own specfic values for the numbers\f0  ,\f1 these \f0 codes\f1  are represented here\f0  as L code being 1 and G code being 2 and R code being 3,\f1  and if we see we can observe that although each array in comparision have 7 \f0 bits \f1 which \f0 mathematically\f1  should have 2^7=128 different probabilities but here we have only 0 till 9 so 10 * 3= 30 this occurs as above aarushi explained the c1 and c2 check \f0 where\f1  we remove multiple barcode representations there to be precise 98 of them then for the rest 30 we \f0 to \f1 compare the values using a long if else if control statment then reutrn the number value\f0  corresponding to the imput\f1  to the ean13 array\f0  of that particular function call bit.\f1\par
+\b0    \par
+    if isequal(vector7, [0 0 0 1 1 0 1])\par
+        number = 0; code = 1; return;\par
+    elseif isequal(vector7, [0 1 0 0 1 1 1])\par
+        number = 0; code = 2; return;\par
+    elseif isequal(vector7, [1 1 1 0 0 1 0])\par
+        number = 0; code = 3; return;\par
+    \par
+    elseif isequal(vector7, [0 0 1 1 0 0 1])\par
+        number = 1; code = 1; return;\par
+    elseif isequal(vector7, [0 1 1 0 0 1 1])\par
+        number = 1; code = 2; return;\par
+    elseif isequal(vector7, [1 1 0 0 1 1 0])\par
+        number = 1; code = 3; return;        \par
+    \par
+    elseif isequal(vector7, [0 0 1 0 0 1 1])\par
+        number = 2; code = 1; return;\par
+    elseif isequal(vector7, [0 0 1 1 0 1 1])\par
+        number = 2; code = 2; return;\par
+    elseif isequal(vector7, [1 1 0 1 1 0 0])\par
+        number = 2; code = 3; return;\par
+    \par
+    elseif isequal(vector7, [0 1 1 1 1 0 1])\par
+        number= 3;  code = 1; return;\par
+    elseif isequal(vector7, [0 1 0 0 0 0 1])\par
+        number = 3; code = 2; return;\par
+    elseif isequal(vector7, [1 0 0 0 0 1 0])\par
+        number = 3; code = 3; return;\par
+    \par
+    elseif isequal(vector7, [0 1 0 0 0 1 1])\par
+        number = 4;  code = 1; return;\par
+    elseif isequal(vector7, [0 0 1 1 1 0 1])\par
+        number = 4; code = 2; return;\par
+    elseif isequal(vector7, [1 0 1 1 1 0 0])\par
+        number = 4; code = 3; return;    \par
+    \par
+    elseif isequal(vector7, [0 1 1 0 0 0 1])\par
+        number = 5;  code = 1; return;\par
+    elseif isequal(vector7, [0 1 1 1 0 0 1])\par
+        number = 5; code = 2; return;\par
+    elseif isequal(vector7, [1 0 0 1 1 1 0])\par
+        number = 5; code = 3; return;    \par
+    \par
+    elseif isequal(vector7, [0 1 0 1 1 1 1])\par
+        number = 6;  code = 1; return;\par
+    elseif isequal(vector7, [0 0 0 0 1 0 1])\par
+        number = 6; code = 2; return;\par
+    elseif isequal(vector7, [1 0 1 0 0 0 0])\par
+        number = 6; code = 3; return;   \par
+    \par
+    elseif isequal(vector7, [0 1 1 1 0 1 1])\par
+        number = 7;  code = 1; return;\par
+    elseif isequal(vector7, [0 0 1 0 0 0 1])\par
+        number = 7; code = 2; return;\par
+    elseif isequal(vector7, [1 0 0 0 1 0 0])\par
+        number = 7; code = 3; return;    \par
+    \par
+    elseif isequal(vector7, [0 1 1 0 1 1 1])\par
+        number = 8;  code = 1; return;\par
+    elseif isequal(vector7, [0 0 0 1 0 0 1])\par
+        number = 8; code = 2; return;\par
+    elseif isequal(vector7, [1 0 0 1 0 0 0])\par
+        number = 8; code = 3; return;   \par
+    \par
+    elseif isequal(vector7, [0 0 0 1 0 1 1])\par
+        number = 9;  code = 1; return;\par
+    elseif isequal(vector7, [0 0 1 0 1 1 1])\par
+        number = 9; code = 2; return;\par
+    elseif isequal(vector7, [1 1 1 0 1 0 0])\par
+        number = 9; code = 3; return;\par
+    \par
+    else number = -2;  code = 0; return;    \par
+    \par
+    end\par
+    \par
+end\par
+\par
+\par
+\b % FINALLY\par
+%How is this going to be useful \par
+%\f0 this can be used in shops like \f1 After the whole number is decoded, it is compared with the database and when a match is found the corresponding information is displayed in another excel sheet. As more number of barcodes is scanned their information is added to the same sheet and a bill is created (by adding the price of each product)\par
+
+\pard\f0\fs32 EXTRA\fs22\par
+%A vector is a one-dimensional array of numbers. MATLAB allows creating two types of vectors \'e2\'88\f1\rquote\par
+\tab\tab 1>Row vectors\par
+\tab\tab 2>Column vectors\par
+\tab Row Vectors:-\par
+\tab Row vectors are created by enclosing the set of elements in square brackets, using space or comma to delimit the elements\par
+\tab %DIFFERENCE BTW ARRAY AND VECOTOR\par
+\tab\tab  ArrayList is not synchronized.\tab Vector is synchronized.\par
+\tab % Synchronised :- Synchronize timetables to common time vector, and resample or aggregate data from input timetables\par
+\tab %(3 is the width of a white bar hence represented by three zeroes). Here, 3 is the width of a white bar, 1 is of black and so on.\par
+
+\pard\f0\fs32 EXTRA\b0\fs22\par
+}
+ 
